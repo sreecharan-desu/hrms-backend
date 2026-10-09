@@ -240,6 +240,15 @@ Production disables `/docs`, `/redoc`, and `/openapi.json`. Generate TypeScript 
 
 | Resource | URL |
 |---|---|
-| GitHub | _filled after `gh repo create`_ |
-| Production API | _filled after `vercel --prod`_ |
+| GitHub | https://github.com/sreecharan-desu/hrms-backend |
+| Production API | https://hrms-backend-silk.vercel.app |
 | Neon project | `still-block-57656607` (branch `production`) |
+
+Frontend clients should set:
+
+```bash
+NEXT_PUBLIC_API_URL=https://hrms-backend-silk.vercel.app
+EXPO_PUBLIC_API_URL=https://hrms-backend-silk.vercel.app
+```
+
+Then ask a backend owner to add the web origin to Vercel env `CORS_ORIGINS`.

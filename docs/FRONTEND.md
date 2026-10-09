@@ -35,7 +35,7 @@ Runtime: one Vercel Fluid Python function (FastAPI ASGI). Local: `uvicorn` + Doc
 | Environment | Base URL |
 |---|---|
 | Local development | `http://localhost:8000` |
-| Production | `PRODUCTION_API_URL` (set after deploy; also in README) |
+| Production | `https://hrms-backend-silk.vercel.app` |
 
 Client env vars:
 
