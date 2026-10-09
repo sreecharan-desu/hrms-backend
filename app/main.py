@@ -21,7 +21,7 @@ def create_app() -> FastAPI:
         level="INFO" if settings.is_production else "DEBUG",
     )
 
-    show_docs = not settings.is_production
+    show_docs = settings.docs_enabled
 
     application = FastAPI(
         title=settings.APP_NAME,

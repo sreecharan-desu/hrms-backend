@@ -184,9 +184,11 @@ Roles: `SUPER_ADMIN`, `HR_ADMIN`, `HR_MANAGER`, `HR_EXECUTIVE`, `MANAGER`, `RECR
 
 Each role maps to a set of fine-grained permissions (e.g. `employee.read`, `leave.approve`). Permissions are cached in Redis per user. See `app/core/permissions.py` for the full mapping.
 
-## Production: Swagger Disabled
+## Production: Swagger / OpenAPI
 
-In production (`APP_ENV=production`), `/docs`, `/redoc`, and `/openapi.json` are all disabled. This is verified by tests in `tests/api/test_internal_docs_hidden.py`.
+By default, production (`APP_ENV=production`) disables `/docs`, `/redoc`, and `/openapi.json`.
+
+**Temporary override:** set `DOCS_ENABLED=true` on Vercel to expose Swagger publicly (current setup). When you are ready to hide docs again, set `DOCS_ENABLED=false` (or remove it) and redeploy. Tests cover both modes in `tests/api/test_internal_docs_hidden.py`.
 
 ## For frontend developers (web + Expo)
 

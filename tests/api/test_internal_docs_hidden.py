@@ -20,8 +20,12 @@ _db_mod.async_session_factory = _TestSession
 from app.core.config import get_settings
 
 
-def _make_app(app_env: str):
+def _make_app(app_env: str, *, docs_enabled: str | None = None):
     os.environ["APP_ENV"] = app_env
+    if docs_enabled is None:
+        os.environ.pop("DOCS_ENABLED", None)
+    else:
+        os.environ["DOCS_ENABLED"] = docs_enabled
     get_settings.cache_clear()
     from app.main import create_app
 
@@ -52,10 +56,16 @@ def _collect_all_paths(application) -> list[str]:
 
 class TestProductionDocsHidden:
     def test_production_docs_url_is_none(self):
-        application = _make_app("production")
+        application = _make_app("production", docs_enabled="false")
         assert application.docs_url is None
         assert application.redoc_url is None
         assert application.openapi_url is None
+
+    def test_production_docs_enabled_override(self):
+        application = _make_app("production", docs_enabled="true")
+        assert application.docs_url == "/docs"
+        assert application.redoc_url == "/redoc"
+        assert application.openapi_url == "/openapi.json"
 
     def test_production_openapi_excludes_internal(self):
         """Internal routes have include_in_schema=False so they won't appear."""

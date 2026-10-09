@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "HRMF"
     APP_VERSION: str = "0.1.0"
     APP_TIMEZONE: str = "Asia/Kolkata"
+    # When True, expose /docs /redoc /openapi.json even in production.
+    # Set False on Vercel when you are ready to hide public API docs.
+    DOCS_ENABLED: bool = False
 
     # ── Database ─────────────────────────────────────────────────────
     DATABASE_URL: str
@@ -78,6 +81,13 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.APP_ENV == "development"
+
+    @property
+    def docs_enabled(self) -> bool:
+        """Swagger/OpenAPI visibility: forced on by DOCS_ENABLED, else non-production."""
+        if self.DOCS_ENABLED:
+            return True
+        return not self.is_production
 
 
 @lru_cache(maxsize=1)
