@@ -1,0 +1,31 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "builds": [
+    {
+      "src": "app/main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app/main.py"
+    }
+  ],
+  "functions": {
+    "app/main.py": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/internal/jobs/drain",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "build": {
+    "env": {}
+  },
+  "excludeFiles": "{tests/**,.venv/**,node_modules/**}"
+}
