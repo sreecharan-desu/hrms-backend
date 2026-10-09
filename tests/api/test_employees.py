@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-os.environ["JWT_SECRET_KEY"] = "test-secret-key-32-bytes-long!!"
+os.environ["JWT_SECRET_KEY"] = "test-secret-key-32-bytes-long!!!"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite://"
 os.environ["APP_ENV"] = "development"
 

@@ -3,7 +3,7 @@
 import os
 
 # Ensure a JWT secret is available during tests
-os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-32-bytes-long!!!")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///")
 
 from app.core.security import (
