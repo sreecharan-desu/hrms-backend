@@ -82,6 +82,9 @@ jobs:
         run: alembic upgrade head
 
       - name: Run tests
+        env:
+          # API tests use in-memory SQLite; do not bind them to the service Postgres.
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
         run: pytest -q --tb=short
 
   docker:

@@ -107,4 +107,11 @@ disallow_any_generics = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-filterwarnings = ["ignore::DeprecationWarning"]
+# One loop for the whole session so module-level async SQLAlchemy engines
+# (used by API tests) are not bound to a closed loop between tests on CI.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::sqlalchemy.exc.SAWarning",
+]

@@ -10,10 +10,17 @@ os.environ["APP_ENV"] = "development"
 
 # Patch core.database before anything imports the module-level engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
 import app.core.database as _db_mod
 
-_test_engine = create_async_engine("sqlite+aiosqlite://", echo=False)
+# StaticPool keeps one connection so in-memory SQLite schema survives across sessions.
+_test_engine = create_async_engine(
+    "sqlite+aiosqlite://",
+    echo=False,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 _TestSession = async_sessionmaker(_test_engine, class_=AsyncSession, expire_on_commit=False)
 
 _db_mod.engine = _test_engine
