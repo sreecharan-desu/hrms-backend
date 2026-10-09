@@ -40,3 +40,8 @@ Thumbs.db
 
 # Node (keep package.json, package-lock.json, neon.ts, .neon)
 node_modules/
+.vercel
+.env*
+
+.env.vercel.production.local
+.vercel
