@@ -41,7 +41,7 @@ build-backend = "hatchling.build"
 packages = ["app"]
 
 [tool.vercel]
-entrypoint = "app.main:app"
+entrypoint = "api.index:app"
 
 # ── Ruff ──────────────────────────────────────────────────────────────
 [tool.ruff]
