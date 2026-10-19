@@ -1,57 +1,59 @@
-# HRMF: HR Management Framework (backend)
+# hrms-backend
 
-HR API built with FastAPI, async SQLAlchemy 2, PostgreSQL (Neon), Redis and S3. It uses a clean-architecture layout: presentation, application, domain, infrastructure.
+hr management api built with fastapi, async sqlalchemy 2, postgres (neon), redis and s3, in a clean-architecture layout.
 
-**Live API:** https://hrms-backend-silk.vercel.app · **Frontend contract:** [docs/FRONTEND.md](docs/FRONTEND.md)
+live api docs: https://hrms-backend-silk.vercel.app/docs · frontend contract: [docs/FRONTEND.md](docs/FRONTEND.md)
 
-## Features
+## features
 
-| Module | Scope |
-|---|---|
-| Auth | Login, rotating refresh token (HttpOnly cookie or body), logout, forgot/reset password with OTP |
-| Employees, Departments | CRUD, compensation, department hierarchy with cycle checks |
-| Attendance, Leave | Check-in/out, manual entries, leave apply/approve/reject/cancel, balances |
-| Documents | Presigned S3 upload (initiate, PUT, confirm) |
-| Recruitment, Performance | Jobs, applications, stage pipeline, interviews; review cycles |
-| Notifications, Audit, Reports | Read/unread, immutable audit log, headcount/attendance/leave reports |
-| RBAC | 8 roles mapped to fine-grained permissions (`app/core/permissions.py`), cached per user in Redis |
+- auth: login, rotating refresh token (http-only cookie or body), logout, otp password reset
+- employees and departments: crud, compensation, department hierarchy with cycle checks
+- attendance and leave: check-in/out, manual entries, apply/approve/reject/cancel, balances
+- documents: presigned s3 upload (initiate, put, confirm)
+- recruitment and performance: jobs, applications, stage pipeline, interviews, review cycles
+- notifications, immutable audit log, headcount/attendance/leave reports
+- rbac: 8 roles mapped to fine-grained permissions (`app/core/permissions.py`), cached per user in redis
 
-## Architecture
+## stack
+
+fastapi · python 3.12 · async sqlalchemy 2 · alembic · postgres · redis · s3/minio · arq worker · deployed as a vercel python function (`api/index.py`) with a cron that drains jobs via `/internal/jobs/drain`.
 
 ```
-presentation    FastAPI routers, Pydantic schemas, middleware   /api/v1/*, /internal/*
+presentation    fastapi routers, pydantic schemas, middleware   /api/v1/*, /internal/*
 application     use-cases, policies, audit logging
 domain          entities, enums, repository interfaces
-infrastructure  SQLAlchemy repos + unit of work, Redis cache, S3, ARQ worker, SMTP
+infrastructure  sqlalchemy repos + unit of work, redis cache, s3, arq worker, smtp
 ```
 
-Deployed as a Vercel Python function (`api/index.py`). A Vercel cron drains background jobs every 5 minutes via `/internal/jobs/drain`.
+## run locally
 
-## Setup
-
-Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), PostgreSQL 15+ and Redis 7+ (MinIO/S3 for documents).
+needs python 3.12+, [uv](https://docs.astral.sh/uv/), postgres 15+ and redis 7+ (minio/s3 for documents).
 
 ```bash
-cp .env.example .env              # DATABASE_URL (pooled), DATABASE_URL_UNPOOLED (direct, for Alembic), JWT secret, ...
+cp .env.example .env
 uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 alembic upgrade head
 python scripts/seed.py            # permissions, roles, dev admin, leave types (refuses APP_ENV=production)
-uvicorn app.main:app --reload     # http://localhost:8000, Swagger at /docs outside production
+uvicorn app.main:app --reload     # http://localhost:8000, swagger at /docs outside production
 ```
 
-Or use `docker compose up -d` (API, worker, Redis, MinIO; `--profile test` adds Postgres on 5433).
+or `docker compose up -d` (api, worker, redis, minio; `--profile test` adds postgres on 5433).
 
-## Tests
+tests:
 
 ```bash
-pytest -q                  # unit + API tests on in-memory SQLite, no services needed
+pytest -q                  # unit + api tests on in-memory sqlite, no services needed
 ruff check app tests && mypy app
 ```
 
-Measured 19 Oct 2026: **199 passed in 9.4 s, 57% line coverage** (`pytest --cov=app`, [raw output](benchmarks/results-2026-10-19/pytest-coverage.txt)). CI (`.github/workflows/ci.yml`) runs lint, mypy, migrations against Postgres, tests and a Docker build.
+measured 19 oct 2026: 199 passed in 9.4 s, 57% line coverage ([raw output](benchmarks/results-2026-10-19/pytest-coverage.txt)).
 
-## Performance (measured)
+## env
+
+copy `.env.example` to `.env`. it needs `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED` (direct, for alembic) and a jwt secret.
+
+## performance (measured)
 
 Single run on one 8 vCPU / 15 GiB VM (Intel Xeon), with **k6 on the same machine as the server**. The server was `uvicorn --workers 4` with local PostgreSQL 17 and Redis 7, and the database held 200 employees. Closed-loop VUs, no think time. Full method and environment: [benchmarks/README.md](benchmarks/README.md). Raw data: [k6 output](benchmarks/results-2026-10-19/k6-output.txt), [summary JSON](benchmarks/results-2026-10-19/k6-summary.json).
 
@@ -68,15 +70,14 @@ Single run on one 8 vCPU / 15 GiB VM (Intel Xeon), with **k6 on the same machine
 
 Reproduce: `benchmarks/run.sh`.
 
-## Auth model
+## auth model
 
-- `POST /api/v1/auth/login` returns a 15-minute JWT access token and sets the `hrmf_refresh` HttpOnly cookie (path `/api/v1/auth`, SameSite=None, Secure in production).
-- Refresh tokens are opaque and stored as SHA-256 hashes. They rotate on every `/auth/refresh`.
-- Mobile (Expo) clients use `refresh_token` from the JSON body and keep it in SecureStore.
+- `POST /api/v1/auth/login` returns a 15-minute jwt access token and sets the `hrmf_refresh` http-only cookie (path `/api/v1/auth`, `SameSite=None`, secure in production).
+- refresh tokens are opaque, stored as sha-256 hashes, and rotate on every `/auth/refresh`.
+- expo clients send `refresh_token` in the json body and keep it in securestore.
 
-## Known issues
+## known issues
 
-- No LICENSE file yet. All rights reserved until one is added.
-- Coverage is uneven: `reports` (43%), `recruitment` (50%) and `leave` (51%) routers are the least tested ([coverage report](benchmarks/results-2026-10-19/pytest-coverage.txt)).
-- The benchmark doesn't cover the production setup (Vercel + Neon) or write-heavy endpoints beyond the 200-row seed.
-- Every request is logged at INFO level through structlog. That's included in the numbers above.
+- no license file yet. all rights reserved until one is added.
+- coverage is uneven: `reports` (43%), `recruitment` (50%) and `leave` (51%) routers are the least tested.
+- the benchmark doesn't cover the production setup (vercel + neon) or write-heavy endpoints.
