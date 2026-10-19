@@ -1,0 +1,33 @@
+
+     ✓ list 200
+     ✓ me 200
+     ✓ login 200
+
+     checks.........................: 100.00% 63802 out of 63802
+     data_received..................: 619 MB  6.8 MB/s
+     data_sent......................: 28 MB   303 kB/s
+     http_req_blocked...............: min=720ns    med=2.57µs   p(90)=3.44µs   p(95)=3.89µs   p(99)=5.81µs   max=16.55ms  avg=5.56µs  
+     http_req_connecting............: min=0s       med=0s       p(90)=0s       p(95)=0s       p(99)=0s       max=16.53ms  avg=2.74µs  
+     http_req_duration..............: min=5.37ms   med=37.64ms  p(90)=88.58ms  p(95)=96.4ms   p(99)=371.38ms max=894.42ms avg=53.1ms  
+       { expected_response:true }...: min=5.37ms   med=37.64ms  p(90)=88.58ms  p(95)=96.4ms   p(99)=371.38ms max=894.42ms avg=53.1ms  
+     ✓ { name:GET /auth/me }........: min=6.64ms   med=34.56ms  p(90)=67.94ms  p(95)=71.09ms  p(99)=89.44ms  max=143.02ms avg=38.45ms 
+     ✓ { name:GET /employees }......: min=8.32ms   med=64.83ms  p(90)=94.81ms  p(95)=106.3ms  p(99)=144.55ms max=187ms    avg=62.58ms 
+     ✓ { name:POST /auth/login }....: min=117.57ms med=427.43ms p(90)=569.69ms p(95)=622.96ms p(99)=715.08ms max=894.42ms avg=428.21ms
+   ✓ http_req_failed................: 0.00%   0 out of 64003
+     ✓ { name:GET /auth/me }........: 0.00%   0 out of 38914
+     ✓ { name:GET /employees }......: 0.00%   0 out of 23950
+     ✓ { name:POST /auth/login }....: 0.00%   0 out of 939
+     http_req_receiving.............: min=8.52µs   med=1.08ms   p(90)=3.42ms   p(95)=3.86ms   p(99)=4.86ms   max=236.22ms avg=1.76ms  
+     http_req_sending...............: min=2.3µs    med=8.95µs   p(90)=12.51µs  p(95)=14.33µs  p(99)=23.26µs  max=6.43ms   avg=10.62µs 
+     http_req_tls_handshaking.......: min=0s       med=0s       p(90)=0s       p(95)=0s       p(99)=0s       max=0s       avg=0s      
+     http_req_waiting...............: min=5.32ms   med=36.67ms  p(90)=85.43ms  p(95)=93.13ms  p(99)=356.64ms max=888.72ms avg=51.33ms 
+     http_reqs......................: 64003   697.886305/s
+     ✓ { name:GET /auth/me }........: 38914   424.316793/s
+     ✓ { name:GET /employees }......: 23950   261.149899/s
+     ✓ { name:POST /auth/login }....: 939     10.238821/s
+     iteration_duration.............: min=6.73ms   med=37.81ms  p(90)=88.7ms   p(95)=96.57ms  p(99)=372.16ms max=897.34ms avg=53.34ms 
+     iterations.....................: 63802   695.694609/s
+     vus............................: 20      min=0              max=50 
+     vus_max........................: 100     min=100            max=100
+
+k6 exit 0

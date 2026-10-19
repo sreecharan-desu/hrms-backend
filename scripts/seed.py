@@ -66,7 +66,7 @@ async def seed() -> None:
         admin_email = settings.DEV_ADMIN_EMAIL
         admin_password = settings.DEV_ADMIN_PASSWORD
         if not admin_password:
-            print("  ⚠ DEV_ADMIN_PASSWORD not set; skipping admin creation")
+            print("  DEV_ADMIN_PASSWORD not set; skipping admin creation")
         else:
             user = await uow.users.get_by_email(admin_email)
             if user is None:
