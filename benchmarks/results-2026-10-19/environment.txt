@@ -1,0 +1,12 @@
+date_ist: 2026-10-19 08:30 UTC
+host: single shared VM (load generator and server on the SAME box)
+cpu: Intel(R) Xeon(R) Processor x 8 vCPU
+ram: 15 GiB
+os: Debian GNU/Linux 13 (trixie), kernel 6.12.94+
+k6: k6 v0.54.0 (commit/baba871c8a, go1.23.1, linux/amd64)
+server: uvicorn app.main:app --workers 4 (APP_ENV=staging: SQL echo off; structlog request logging on, as shipped), Python 3.12.15
+db: local PostgreSQL 17 + Redis 7 on the same box (not Neon; no network RTT)
+data: seed.py + 200 employees created in k6 setup()
+cold_start_ms: 957
+idle_rss_total_mb: 444.8 (processes: 6)
+under_load_rss_total_mb: 519.8 (processes: 6)
