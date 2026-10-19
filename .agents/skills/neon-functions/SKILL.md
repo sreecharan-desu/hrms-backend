@@ -268,8 +268,8 @@ A Neon Function is a great home for an AI agent precisely because it **doesn't t
 **The fix: call the function directly from the client.** Don't route the long request through your app server.
 
 ```
-Browser ──(Authorization: Bearer <JWT>)──▶  Neon Function (agent)   ✅ no host timeout
-Browser ──▶ your app backend ──▶ Neon Function                       ❌ host cuts the stream
+Browser ──(Authorization: Bearer <JWT>)── Neon Function (agent)   no host timeout
+Browser ──your app backend ──Neon Function                       host cuts the stream
 ```
 
 - Get a **short-lived bearer token** from the identity the app already uses. Do not switch Clerk, Better Auth, Auth.js, Supabase Auth, or Managed Auth in order to call a Function.
@@ -497,7 +497,7 @@ pool
 
 - **Latency:** up to the interval (~1s) — fine for counters, chat, and dashboards.
 - **Scaling:** database load grows with the number of live isolates, not clients. Keep the cursor on an indexed `serial`/`bigserial` PK and the interval sane.
-- **Scale to Zero:** ✅ preserved — polling stops when no clients are connected, so the compute suspends on its normal timer.
+- **Scale to Zero:** preserved — polling stops when no clients are connected, so the compute suspends on its normal timer.
 - **Ordering:** `WHERE id > cursor` can skip a row that commits out of sequence: a transaction that took a lower id but commits after a higher one is already behind the cursor, so the poll never returns it. For a broadcast feed occasional loss is usually fine; when you need every row, use `LISTEN`/`NOTIFY` or poll by `created_at` with a small overlap window and dedupe by id.
 
 **2. `LISTEN`/`NOTIFY` — lowest latency, but requires disabling Scale to Zero.** Each isolate `LISTEN`s on a channel over a dedicated **unpooled** connection; broadcasting is `NOTIFY`, so every isolate (including the sender's) re-pushes to its sockets. Near-instant — but the listener holds an idle connection that **does not count as active**, so [Scale to Zero](https://neon.com/docs/introduction/scale-to-zero) suspends the compute and drops it, silently killing the feed. Only use it on an **always-on** compute (Scale to Zero disabled — a paid-plan setting).

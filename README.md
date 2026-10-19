@@ -1,256 +1,82 @@
-# HRMF — Human Resource Management Framework (Backend)
+# HRMF: HR Management Framework (backend)
 
-A production-grade HR management API built with **FastAPI**, **SQLAlchemy 2 (async)**, **Neon Postgres**, and a clean-architecture domain layer.
+HR API built with FastAPI, async SQLAlchemy 2, PostgreSQL (Neon), Redis and S3. It uses a clean-architecture layout: presentation, application, domain, infrastructure.
+
+**Live API:** https://hrms-backend-silk.vercel.app · **Frontend contract:** [docs/FRONTEND.md](docs/FRONTEND.md)
+
+## Features
+
+| Module | Scope |
+|---|---|
+| Auth | Login, rotating refresh token (HttpOnly cookie or body), logout, forgot/reset password with OTP |
+| Employees, Departments | CRUD, compensation, department hierarchy with cycle checks |
+| Attendance, Leave | Check-in/out, manual entries, leave apply/approve/reject/cancel, balances |
+| Documents | Presigned S3 upload (initiate, PUT, confirm) |
+| Recruitment, Performance | Jobs, applications, stage pipeline, interviews; review cycles |
+| Notifications, Audit, Reports | Read/unread, immutable audit log, headcount/attendance/leave reports |
+| RBAC | 8 roles mapped to fine-grained permissions (`app/core/permissions.py`), cached per user in Redis |
 
 ## Architecture
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│                       Presentation                         │
-│  FastAPI routers · Pydantic schemas · Middleware           │
-│  /api/v1/*  (versioned)   /internal/*  (health, cron)     │
-├────────────────────────────────────────────────────────────┤
-│                       Application                          │
-│  Use-cases · Policies · Audit logging                      │
-├────────────────────────────────────────────────────────────┤
-│                         Domain                             │
-│  Entities · Enums · Repository interfaces                  │
-├────────────────────────────────────────────────────────────┤
-│                      Infrastructure                        │
-│  SQLAlchemy repos · Redis cache · S3 storage · ARQ worker  │
-│  SMTP email · Database session/UoW                         │
-└────────────────────────────────────────────────────────────┘
-        │               │              │
-   Neon Postgres      Redis         MinIO / S3
+presentation    FastAPI routers, Pydantic schemas, middleware   /api/v1/*, /internal/*
+application     use-cases, policies, audit logging
+domain          entities, enums, repository interfaces
+infrastructure  SQLAlchemy repos + unit of work, Redis cache, S3, ARQ worker, SMTP
 ```
 
-### Modules
+Deployed as a Vercel Python function (`api/index.py`). A Vercel cron drains background jobs every 5 minutes via `/internal/jobs/drain`.
 
-| Module | Description |
-|---|---|
-| **Auth** | Login, refresh (cookie), logout, forgot/reset password, OTP |
-| **Employees** | CRUD, compensation, nested attendance/leave/docs/perf |
-| **Departments** | CRUD with parent hierarchy |
-| **Attendance** | Check-in/out, manual entry, date-range queries |
-| **Leave** | Apply, approve/reject/cancel, balances, leave types |
-| **Documents** | Presigned S3 upload flow (initiate → PUT → confirm) |
-| **Recruitment** | Jobs, applications, stage pipeline, interviews, feedback |
-| **Performance** | Cycles, reviews, submit/approve workflow |
-| **Notifications** | List, mark read, mark all read |
-| **Audit** | Immutable audit log with actor/entity/diff tracking |
-| **Users** | Admin user management, role assignment |
-| **Reports** | Headcount, attendance summary, leave usage |
+## Setup
 
-## Requirements
-
-- Python ≥ 3.12
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
-- Neon Postgres (or any PostgreSQL 15+)
-- Redis 7+
-- MinIO or S3-compatible storage (for documents)
-
-## Environment Setup
+Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), PostgreSQL 15+ and Redis 7+ (MinIO/S3 for documents).
 
 ```bash
-cp .env.example .env
-# Edit .env with your Neon connection strings, JWT secret, etc.
-```
-
-### Neon Database Notes
-
-- **`DATABASE_URL`** — Use the **pooled** connection string from Neon (`-pooler` host). Used by the app at runtime.
-- **`DATABASE_URL_UNPOOLED`** — Use the **direct** (unpooled) connection string. Used by Alembic migrations (pgbouncer doesn't support DDL well).
-- Both URLs should include `?sslmode=require`. The app auto-configures SSL for Neon hosts.
-- The async driver `postgresql+asyncpg://` prefix is added automatically if you provide `postgresql://` or `postgres://`.
-
-## Installation
-
-```bash
-# Create virtual environment and install
+cp .env.example .env              # DATABASE_URL (pooled), DATABASE_URL_UNPOOLED (direct, for Alembic), JWT secret, ...
 uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
+alembic upgrade head
+python scripts/seed.py            # permissions, roles, dev admin, leave types (refuses APP_ENV=production)
+uvicorn app.main:app --reload     # http://localhost:8000, Swagger at /docs outside production
 ```
 
-## Docker
+Or use `docker compose up -d` (API, worker, Redis, MinIO; `--profile test` adds Postgres on 5433).
+
+## Tests
 
 ```bash
-# Start API + worker + Redis + MinIO
-docker compose up -d
-
-# Start with local Postgres for testing
-docker compose --profile test up -d
+pytest -q                  # unit + API tests on in-memory SQLite, no services needed
+ruff check app tests && mypy app
 ```
 
-Services exposed:
-| Service | Port |
-|---|---|
-| API | 8000 |
-| Redis | 6379 |
-| MinIO API | 9000 |
-| MinIO Console | 9001 |
-| Postgres (test profile) | 5433 |
+Measured 19 Oct 2026: **199 passed in 9.4 s, 57% line coverage** (`pytest --cov=app`, [raw output](benchmarks/results-2026-10-19/pytest-coverage.txt)). CI (`.github/workflows/ci.yml`) runs lint, mypy, migrations against Postgres, tests and a Docker build.
 
-## Database Migrations
+## Performance (measured)
 
-Migrations use Alembic against the **unpooled** connection:
+Single run on one 8 vCPU / 15 GiB VM (Intel Xeon), with **k6 on the same machine as the server**. The server was `uvicorn --workers 4` with local PostgreSQL 17 and Redis 7, and the database held 200 employees. Closed-loop VUs, no think time. Full method and environment: [benchmarks/README.md](benchmarks/README.md). Raw data: [k6 output](benchmarks/results-2026-10-19/k6-output.txt), [summary JSON](benchmarks/results-2026-10-19/k6-summary.json).
 
-```bash
-# Apply all migrations
-DATABASE_URL_UNPOOLED=<your-direct-neon-url> alembic upgrade head
+| Endpoint | Concurrency (VUs) | Requests | Throughput (req/s) | p50 (ms) | p95 (ms) | p99 (ms) | Max (ms) | Error rate |
+|---|---|---|---|---|---|---|---|---|
+| `GET /employees` | 50 | 23,950 | 798 | 64.8 | 106.3 | 144.6 | 187.0 | 0.00% |
+| `GET /auth/me` | 50 | 38,914 | 1,297 | 34.6 | 71.1 | 89.4 | 143.0 | 0.00% |
+| `POST /auth/login` | 20 | 939 | 47 | 427.4 | 623.0 | 715.1 | 894.4 | 0.00% |
 
-# Create a new migration
-alembic revision --autogenerate -m "description"
-```
+- Sustained **798 req/s at p95 106 ms** on the paginated employee list (50 VUs) on that hardware.
+- Login is CPU-bound by design (argon2 password hashing): 47 logins/s at p95 623 ms.
+- Cold start (process launch to first healthy response, 4 workers): **957 ms**. Memory (RSS, master + 4 workers): **445 MB idle, 520 MB under load**.
+- These are local numbers. Production on Vercel + Neon adds network round-trips and serverless cold starts, which this run didn't measure.
 
-## Seed Data
+Reproduce: `benchmarks/run.sh`.
 
-Seeds permissions, roles, a dev admin user, and default leave types:
+## Auth model
 
-```bash
-uv run python scripts/seed.py
-```
+- `POST /api/v1/auth/login` returns a 15-minute JWT access token and sets the `hrmf_refresh` HttpOnly cookie (path `/api/v1/auth`, SameSite=None, Secure in production).
+- Refresh tokens are opaque and stored as SHA-256 hashes. They rotate on every `/auth/refresh`.
+- Mobile (Expo) clients use `refresh_token` from the JSON body and keep it in SecureStore.
 
-> Refuses to run when `APP_ENV=production`.
+## Known issues
 
-## Run Locally
-
-```bash
-uv run uvicorn app.main:app --reload
-# API available at http://localhost:8000
-# Swagger UI at http://localhost:8000/docs (development only)
-```
-
-## Testing
-
-```bash
-# All tests
-uv run pytest -q
-
-# Unit tests only
-uv run pytest tests/unit -q
-
-# API tests only
-uv run pytest tests/api -q
-```
-
-Tests use SQLite (in-memory via aiosqlite) so no external database is needed for unit/API tests.
-
-## Linting & Type Checking
-
-```bash
-# Lint
-uv run ruff check app tests
-
-# Auto-fix
-uv run ruff check app tests --fix
-
-# Format
-uv run ruff format app tests
-
-# Type check
-uv run mypy app
-```
-
-Mypy is configured with `strict = true` and the `pydantic.mypy` plugin. SQLAlchemy and third-party stubs that are missing are ignored via `[[tool.mypy.overrides]]` in `pyproject.toml`.
-
-## Vercel Deployment
-
-The app deploys to Vercel as a serverless Python function:
-
-```bash
-vercel --prod
-```
-
-- Entry point: `app/main.py` → `app` (ASGI)
-- Cron job drains background tasks every 5 minutes via `/internal/jobs/drain`
-- Configuration in `vercel.json`
-
-Set all `.env` variables in the Vercel dashboard under **Settings → Environment Variables**.
-
-## API Versioning
-
-All public endpoints are prefixed with `/api/v1/`. Internal endpoints (`/internal/*`) are excluded from the OpenAPI schema.
-
-## Authentication & Cookie Model
-
-- **Login** (`POST /api/v1/auth/login`): Returns `access_token` in the response body and sets `hrmf_refresh` as an HttpOnly cookie.
-- **Access token**: Short-lived JWT (15 min default), sent as `Authorization: Bearer <token>`.
-- **Refresh token**: Opaque token stored as SHA-256 hash in the DB. Rotated on each `/auth/refresh` call.
-- **Cookie**: `hrmf_refresh`, HttpOnly, SameSite=None, Secure in production, path `/api/v1/auth`.
-
-## RBAC (Role-Based Access Control)
-
-Roles: `SUPER_ADMIN`, `HR_ADMIN`, `HR_MANAGER`, `HR_EXECUTIVE`, `MANAGER`, `RECRUITER`, `INTERVIEWER`, `EMPLOYEE`
-
-Each role maps to a set of fine-grained permissions (e.g. `employee.read`, `leave.approve`). Permissions are cached in Redis per user. See `app/core/permissions.py` for the full mapping.
-
-## Production: Swagger / OpenAPI
-
-By default, production (`APP_ENV=production`) disables `/docs`, `/redoc`, and `/openapi.json`.
-
-**Temporary override:** set `DOCS_ENABLED=true` on Vercel to expose Swagger publicly (current setup). When you are ready to hide docs again, set `DOCS_ENABLED=false` (or remove it) and redeploy. Tests cover both modes in `tests/api/test_internal_docs_hidden.py`.
-
-## For frontend developers (web + Expo)
-
-This backend is shared by:
-
-1. **HR web portal** (recommended: Next.js App Router)
-2. **Staff mobile app** (recommended: Expo Router + SecureStore)
-
-### Must-read docs
-
-| Doc | Audience |
-|---|---|
-| **[docs/FRONTEND.md](docs/FRONTEND.md)** | Full API contract: envelopes, auth, pagination (`offset`/`limit`), endpoints, permissions, uploads |
-| **[docs/FRONTEND_AGENT.md](docs/FRONTEND_AGENT.md)** | Copy-paste brief for coding agents to build a sleek web + Expo UI against this API |
-| **[AGENTS.md](AGENTS.md)** | Short rules for any agent opened on this repo |
-
-### Client env
-
-```bash
-# Web
-NEXT_PUBLIC_API_URL=http://localhost:8000
-
-# Expo
-EXPO_PUBLIC_API_URL=http://localhost:8000
-```
-
-After production deploy, point both at the live Vercel URL (see **Deployed URLs** below).
-
-### Auth differences
-
-- **Web:** access token in memory; refresh via HttpOnly `hrmf_refresh` cookie; always `credentials: "include"`. Ask backend owners to add your origin to `CORS_ORIGINS`.
-- **Expo:** cookies are unreliable; use `refresh_token` from the login/refresh **JSON body** and store both tokens in **Expo SecureStore**.
-
-Login/refresh responses include `refresh_token` in `data` for mobile. Web can ignore the body field and rely on the cookie.
-
-### Local API docs
-
-```text
-http://localhost:8000/docs
-```
-
-Production disables `/docs`, `/redoc`, and `/openapi.json`. Generate TypeScript types from local OpenAPI, not from production.
-
-### Do not
-
-- Call `/internal/*` from any client
-- Invent endpoints not listed in OpenAPI / `docs/FRONTEND.md`
-- Store refresh tokens in `localStorage` (web) or AsyncStorage (mobile)
-
-## Deployed URLs
-
-| Resource | URL |
-|---|---|
-| GitHub | https://github.com/sreecharan-desu/hrms-backend |
-| Production API | https://hrms-backend-silk.vercel.app |
-| Neon project | `still-block-57656607` (branch `production`) |
-
-Frontend clients should set:
-
-```bash
-NEXT_PUBLIC_API_URL=https://hrms-backend-silk.vercel.app
-EXPO_PUBLIC_API_URL=https://hrms-backend-silk.vercel.app
-```
-
-Then ask a backend owner to add the web origin to Vercel env `CORS_ORIGINS`.
+- No LICENSE file yet. All rights reserved until one is added.
+- Coverage is uneven: `reports` (43%), `recruitment` (50%) and `leave` (51%) routers are the least tested ([coverage report](benchmarks/results-2026-10-19/pytest-coverage.txt)).
+- The benchmark doesn't cover the production setup (Vercel + Neon) or write-heavy endpoints beyond the 200-row seed.
+- Every request is logged at INFO level through structlog. That's included in the numbers above.
