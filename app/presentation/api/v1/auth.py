@@ -172,6 +172,7 @@ async def reset_password_endpoint(
 
     await reset_password(
         email=body.email,
+        reset_token=body.reset_token,
         new_password=body.new_password,
         uow=uow,
     )

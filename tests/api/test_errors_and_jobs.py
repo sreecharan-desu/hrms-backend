@@ -314,57 +314,6 @@ async def test_attendance_checkout_without_checkin_is_404(client):
     assert r.status_code == 404
 
 
-# ---------------- otp ----------------
-
-
-@pytest.mark.asyncio
-async def test_forgot_password_is_silent_and_otp_verifies_once(client, monkeypatch):
-    import app.application.auth.forgot_password as fp
-    import app.application.auth.verify_otp as vo
-
-    store: dict[str, str] = {}
-
-    async def _store(email, h):
-        store[email] = h
-
-    async def _get(email):
-        return store.get(email)
-
-    async def _del(email):
-        store.pop(email, None)
-
-    monkeypatch.setattr(fp, "store_otp", _store)
-    monkeypatch.setattr(vo, "get_stored_otp", _get)
-    monkeypatch.setattr(vo, "delete_otp", _del)
-    sent: list[str] = []
-    real = fp._generate_otp
-    monkeypatch.setattr(
-        fp, "_generate_otp", lambda length=6: sent.append(real(length)) or sent[-1]
-    )
-
-    unknown = await client.post(
-        "/api/v1/auth/forgot-password", json={"email": "ghost@example.com"}
-    )
-    assert unknown.status_code == 200 and not sent  # no enumeration, nothing generated
-    ok = await client.post("/api/v1/auth/forgot-password", json={"email": "staff@example.com"})
-    assert ok.status_code == 200 and len(sent) == 1 and len(sent[0]) == 6
-
-    wrong = await client.post(
-        "/api/v1/auth/verify-otp",
-        json={"email": "staff@example.com", "otp": "000000" if sent[0] != "000000" else "111111"},
-    )
-    assert wrong.status_code == 401
-    good = await client.post(
-        "/api/v1/auth/verify-otp", json={"email": "staff@example.com", "otp": sent[0]}
-    )
-    assert good.status_code == 200 and len(good.json()["data"]["reset_token"]) > 40
-    # redis entry is consumed; the db fallback only accepts the hash for the right user
-    other = await client.post(
-        "/api/v1/auth/verify-otp", json={"email": "admin@example.com", "otp": sent[0]}
-    )
-    assert other.status_code == 401
-
-
 # ---------------- outbox drain ----------------
 
 

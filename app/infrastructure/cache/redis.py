@@ -134,3 +134,33 @@ async def delete_otp(email: str) -> None:
     if r is None:
         return
     await r.delete(f"otp:{email}")
+
+
+# ── OTP attempt limit ────────────────────────────────────────────────
+
+_MAX_OTP_ATTEMPTS = 5
+
+
+async def otp_attempts_exceeded(email: str) -> bool:
+    r = await get_redis()
+    if r is None:
+        return False
+    raw = await r.get(f"otp_fail:{email}")
+    return raw is not None and int(raw) >= _MAX_OTP_ATTEMPTS
+
+
+async def record_failed_otp(email: str) -> None:
+    r = await get_redis()
+    if r is None:
+        return
+    pipe = r.pipeline()
+    pipe.incr(f"otp_fail:{email}")
+    pipe.expire(f"otp_fail:{email}", _OTP_TTL)
+    await pipe.execute()
+
+
+async def clear_failed_otp(email: str) -> None:
+    r = await get_redis()
+    if r is None:
+        return
+    await r.delete(f"otp_fail:{email}")
