@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import date
 from typing import Annotated
 
@@ -45,7 +46,7 @@ async def check_in_endpoint(
 ):
     eid = employee_id or user.id
     result = await check_in(uow, user, eid, ctx)
-    return created_response(data=result.__dict__, message="Checked in successfully.")
+    return created_response(data=asdict(result), message="Checked in successfully.")
 
 
 @router.post("/check-out")
@@ -57,7 +58,7 @@ async def check_out_endpoint(
 ):
     eid = employee_id or user.id
     result = await check_out(uow, user, eid, ctx)
-    return success_response(data=result.__dict__, message="Checked out successfully.")
+    return success_response(data=asdict(result), message="Checked out successfully.")
 
 
 @router.get("")
@@ -80,7 +81,7 @@ async def list_attendance_endpoint(
     )
     return success_response(
         data={
-            "items": [i.__dict__ for i in result.items],
+            "items": [asdict(i) for i in result.items],
             "total": result.total,
             "offset": result.offset,
             "limit": result.limit,
@@ -113,7 +114,7 @@ async def get_employee_attendance_endpoint(
     )
     return success_response(
         data={
-            "items": [i.__dict__ for i in result.items],
+            "items": [asdict(i) for i in result.items],
             "total": result.total,
             "offset": result.offset,
             "limit": result.limit,
@@ -137,7 +138,7 @@ async def manual_attendance_endpoint(
         remarks=body.remarks,
     )
     result = await create_manual_attendance(uow, user, data, ctx)
-    return created_response(data=result.__dict__, message="Manual attendance recorded.")
+    return created_response(data=asdict(result), message="Manual attendance recorded.")
 
 
 @router.patch("/{attendance_id}")
@@ -155,4 +156,4 @@ async def update_attendance_endpoint(
         remarks=body.remarks,
     )
     result = await update_attendance(uow, user, attendance_id, data, ctx)
-    return success_response(data=result.__dict__, message="Attendance updated.")
+    return success_response(data=asdict(result), message="Attendance updated.")

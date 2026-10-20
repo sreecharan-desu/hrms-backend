@@ -68,8 +68,7 @@ async def login_endpoint(
         user_agent=ctx.user_agent,
         uow=uow,
     )
-    _set_refresh_cookie(response, result.refresh_token)
-    return success_response(
+    out = success_response(
         data={
             "access_token": result.access_token,
             "refresh_token": result.refresh_token,
@@ -81,6 +80,10 @@ async def login_endpoint(
         },
         message="Login successful.",
     )
+    # set the cookie on the response we return; mutating the injected
+    # `response` is discarded when an explicit Response is returned.
+    _set_refresh_cookie(out, result.refresh_token)
+    return out
 
 
 @router.post("/refresh")
@@ -98,8 +101,7 @@ async def refresh_endpoint(
         raise AuthError("No refresh token provided.")
 
     result = await rotate_refresh_token(raw_token, uow)
-    _set_refresh_cookie(response, result.refresh_token)
-    return success_response(
+    out = success_response(
         data={
             "access_token": result.access_token,
             "refresh_token": result.refresh_token,
@@ -108,6 +110,10 @@ async def refresh_endpoint(
         },
         message="Token refreshed.",
     )
+    # set the cookie on the response we return; mutating the injected
+    # `response` is discarded when an explicit Response is returned.
+    _set_refresh_cookie(out, result.refresh_token)
+    return out
 
 
 @router.post("/logout")
@@ -125,8 +131,9 @@ async def logout_endpoint(
         raise AuthError("No refresh token provided.")
 
     await logout(raw_token, uow)
-    _delete_refresh_cookie(response)
-    return success_response(message="Logged out successfully.")
+    out = success_response(message="Logged out successfully.")
+    _delete_refresh_cookie(out)
+    return out
 
 
 @router.post("/forgot-password")

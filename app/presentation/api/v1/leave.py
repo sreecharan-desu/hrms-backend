@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import date
 from typing import Annotated
 
@@ -54,7 +55,7 @@ async def apply_leave_endpoint(
         reason=body.reason,
     )
     result = await apply_leave(uow, user, data, ctx)
-    return created_response(data=result.__dict__, message="Leave request submitted.")
+    return created_response(data=asdict(result), message="Leave request submitted.")
 
 
 @router.get("")
@@ -79,7 +80,7 @@ async def list_leaves_endpoint(
     )
     return success_response(
         data={
-            "items": [i.__dict__ for i in result.items],
+            "items": [asdict(i) for i in result.items],
             "total": result.total,
             "offset": result.offset,
             "limit": result.limit,
@@ -94,7 +95,7 @@ async def my_balances_endpoint(
     year: int = Query(default_factory=lambda: date.today().year),
 ):
     balances = await get_my_balances(uow, user.id, year)
-    return success_response(data=[b.__dict__ for b in balances])
+    return success_response(data=[asdict(b) for b in balances])
 
 
 @router.get("/{leave_id}")
@@ -108,7 +109,7 @@ async def get_leave_endpoint(
         from app.core.exceptions import ForbiddenError
 
         raise ForbiddenError("You can only view your own leave requests.")
-    return success_response(data=result.__dict__)
+    return success_response(data=asdict(result))
 
 
 @router.post("/{leave_id}/approve")
@@ -121,7 +122,7 @@ async def approve_leave_endpoint(
 ):
     comment = body.comment if body else None
     result = await approve_leave(uow, user, leave_id, ctx, comment=comment)
-    return success_response(data=result.__dict__, message="Leave request approved.")
+    return success_response(data=asdict(result), message="Leave request approved.")
 
 
 @router.post("/{leave_id}/reject")
@@ -133,7 +134,7 @@ async def reject_leave_endpoint(
     ctx: Annotated[RequestContext, Depends(get_request_context)],
 ):
     result = await reject_leave(uow, user, leave_id, body.reason, ctx)
-    return success_response(data=result.__dict__, message="Leave request rejected.")
+    return success_response(data=asdict(result), message="Leave request rejected.")
 
 
 @router.post("/{leave_id}/cancel")
@@ -144,7 +145,7 @@ async def cancel_leave_endpoint(
     ctx: Annotated[RequestContext, Depends(get_request_context)],
 ):
     result = await cancel_leave(uow, user, leave_id, ctx)
-    return success_response(data=result.__dict__, message="Leave request cancelled.")
+    return success_response(data=asdict(result), message="Leave request cancelled.")
 
 
 # ── Leave types (read-only) ─────────────────────────────────────────
@@ -158,4 +159,4 @@ async def list_leave_types_endpoint(
     uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
 ):
     types = await list_leave_types(uow)
-    return success_response(data=[t.__dict__ for t in types])
+    return success_response(data=[asdict(t) for t in types])

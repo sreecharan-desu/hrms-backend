@@ -579,7 +579,10 @@ async def move_application_stage(
         raise NotFoundError("Application not found.")
 
     from_stage = ApplicationStage(app.stage)
-    to_stage = ApplicationStage(data.stage)
+    try:
+        to_stage = ApplicationStage(data.stage)
+    except ValueError:
+        raise ValidationAppError(f"Unknown stage: {data.stage}") from None
 
     if not ApplicationStage.can_transition(from_stage, to_stage):
         raise ApplicationInvalidStageTransitionError(
