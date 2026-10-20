@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -48,7 +49,7 @@ async def create_cycle_endpoint(
         status=body.status,
     )
     result = await create_cycle(uow, user, data, ctx)
-    return created_response(data=result.__dict__, message="Performance cycle created.")
+    return created_response(data=asdict(result), message="Performance cycle created.")
 
 
 @router.get("/cycles")
@@ -62,7 +63,7 @@ async def list_cycles_endpoint(
     result = await list_cycles(uow, status=status, offset=offset, limit=limit)
     return success_response(
         data={
-            "items": [i.__dict__ for i in result.items],
+            "items": [asdict(i) for i in result.items],
             "total": result.total,
             "offset": result.offset,
             "limit": result.limit,
@@ -90,7 +91,7 @@ async def create_review_endpoint(
         goals=[g.model_dump() for g in body.goals] if body.goals else None,
     )
     result = await create_review(uow, user, data, ctx)
-    return created_response(data=result.__dict__, message="Performance review created.")
+    return created_response(data=asdict(result), message="Performance review created.")
 
 
 @router.get("/reviews")
@@ -113,7 +114,7 @@ async def list_reviews_endpoint(
     )
     return success_response(
         data={
-            "items": [i.__dict__ for i in result.items],
+            "items": [asdict(i) for i in result.items],
             "total": result.total,
             "offset": result.offset,
             "limit": result.limit,
@@ -128,7 +129,7 @@ async def get_review_endpoint(
     uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
 ):
     result = await get_review(uow, review_id)
-    return success_response(data=result.__dict__)
+    return success_response(data=asdict(result))
 
 
 @router.post("/reviews/{review_id}/submit")
@@ -139,7 +140,7 @@ async def submit_review_endpoint(
     ctx: Annotated[RequestContext, Depends(get_request_context)],
 ):
     result = await submit_review(uow, user, review_id, ctx)
-    return success_response(data=result.__dict__, message="Review submitted for approval.")
+    return success_response(data=asdict(result), message="Review submitted for approval.")
 
 
 @router.post("/reviews/{review_id}/approve")
@@ -150,4 +151,4 @@ async def approve_review_endpoint(
     ctx: Annotated[RequestContext, Depends(get_request_context)],
 ):
     result = await approve_review(uow, user, review_id, ctx)
-    return success_response(data=result.__dict__, message="Review approved.")
+    return success_response(data=asdict(result), message="Review approved.")

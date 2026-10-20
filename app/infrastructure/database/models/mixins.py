@@ -23,6 +23,10 @@ class UUIDPrimaryKeyMixin:
 class TimestampMixin:
     """Provides ``created_at`` and ``updated_at`` columns (UTC)."""
 
+    # fetch server-generated timestamps in the same INSERT/UPDATE (RETURNING) so
+    # reading ``updated_at`` after a flush never triggers a lazy load in async code.
+    __mapper_args__ = {"eager_defaults": True}
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -81,7 +82,7 @@ async def create_job_endpoint(
         closes_at=body.closes_at.isoformat() if body.closes_at else None,
     )
     result = await create_job(uow, user, data, ctx)
-    return created_response(data=result.__dict__, message="Job created.")
+    return created_response(data=asdict(result), message="Job created.")
 
 
 @jobs_router.get("")
@@ -98,7 +99,7 @@ async def list_jobs_endpoint(
     )
     return success_response(
         data={
-            "items": [i.__dict__ for i in result.items],
+            "items": [asdict(i) for i in result.items],
             "total": result.total,
             "offset": result.offset,
             "limit": result.limit,
@@ -113,7 +114,7 @@ async def get_job_endpoint(
     uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
 ):
     result = await get_job(uow, job_id)
-    return success_response(data=result.__dict__)
+    return success_response(data=asdict(result))
 
 
 @jobs_router.patch("/{job_id}")
@@ -138,7 +139,7 @@ async def update_job_endpoint(
         closes_at=body.closes_at.isoformat() if body.closes_at else None,
     )
     result = await update_job(uow, user, job_id, data, ctx)
-    return success_response(data=result.__dict__, message="Job updated.")
+    return success_response(data=asdict(result), message="Job updated.")
 
 
 @jobs_router.delete("/{job_id}")
@@ -160,7 +161,7 @@ async def publish_job_endpoint(
     ctx: Annotated[RequestContext, Depends(get_request_context)],
 ):
     result = await publish_job(uow, user, job_id, ctx)
-    return success_response(data=result.__dict__, message="Job published.")
+    return success_response(data=asdict(result), message="Job published.")
 
 
 @jobs_router.post("/{job_id}/close")
@@ -171,7 +172,7 @@ async def close_job_endpoint(
     ctx: Annotated[RequestContext, Depends(get_request_context)],
 ):
     result = await close_job(uow, user, job_id, ctx)
-    return success_response(data=result.__dict__, message="Job closed.")
+    return success_response(data=asdict(result), message="Job closed.")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -197,7 +198,7 @@ async def create_application_endpoint(
         notes=body.notes,
     )
     result = await create_application(uow, user, data, ctx)
-    return created_response(data=result.__dict__, message="Application created.")
+    return created_response(data=asdict(result), message="Application created.")
 
 
 @applications_router.get("")
@@ -214,7 +215,7 @@ async def list_applications_endpoint(
     )
     return success_response(
         data={
-            "items": [i.__dict__ for i in result.items],
+            "items": [asdict(i) for i in result.items],
             "total": result.total,
             "offset": result.offset,
             "limit": result.limit,
@@ -229,7 +230,7 @@ async def get_application_endpoint(
     uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
 ):
     result = await get_application(uow, application_id)
-    return success_response(data=result.__dict__)
+    return success_response(data=asdict(result))
 
 
 @applications_router.patch("/{application_id}")
@@ -246,7 +247,7 @@ async def update_application_endpoint(
         notes=body.notes,
     )
     result = await update_application(uow, user, application_id, data, ctx)
-    return success_response(data=result.__dict__, message="Application updated.")
+    return success_response(data=asdict(result), message="Application updated.")
 
 
 @applications_router.post("/{application_id}/move-stage")
@@ -259,7 +260,7 @@ async def move_stage_endpoint(
 ):
     data = MoveStageInput(stage=body.stage, note=body.note)
     result = await move_application_stage(uow, user, application_id, data, ctx)
-    return success_response(data=result.__dict__, message="Application stage updated.")
+    return success_response(data=asdict(result), message="Application stage updated.")
 
 
 # ── Interviews (nested under applications) ───────────────────────────
@@ -280,7 +281,7 @@ async def create_interview_endpoint(
         location=body.location,
     )
     result = await create_interview(uow, user, application_id, data, ctx)
-    return created_response(data=result.__dict__, message="Interview scheduled.")
+    return created_response(data=asdict(result), message="Interview scheduled.")
 
 
 @applications_router.get("/{application_id}/interviews")
@@ -298,10 +299,10 @@ async def list_interviews_endpoint(
         raw = await uow.interviews.list_by_interviewer(
             user.id, offset=offset, limit=limit
         )
-        return success_response(data=[_interview_to_dto(i).__dict__ for i in raw])
+        return success_response(data=[asdict(_interview_to_dto(i)) for i in raw])
 
     results = await list_interviews(uow, application_id, offset=offset, limit=limit)
-    return success_response(data=[i.__dict__ for i in results])
+    return success_response(data=[asdict(i) for i in results])
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -327,7 +328,7 @@ async def create_feedback_endpoint(
         comments=body.comments,
     )
     result = await create_interview_feedback(uow, user, interview_id, data, ctx)
-    return created_response(data=result.__dict__, message="Feedback submitted.")
+    return created_response(data=asdict(result), message="Feedback submitted.")
 
 
 @interviews_router.patch("/{interview_id}")
@@ -346,4 +347,4 @@ async def update_interview_endpoint(
         status=body.status,
     )
     result = await update_interview(uow, user, interview_id, data, ctx)
-    return success_response(data=result.__dict__, message="Interview updated.")
+    return success_response(data=asdict(result), message="Interview updated.")
