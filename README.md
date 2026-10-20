@@ -55,7 +55,7 @@ copy `.env.example` to `.env`. it needs `DATABASE_URL` (pooled), `DATABASE_URL_U
 
 ## performance (measured)
 
-Single run on one 8 vCPU / 15 GiB VM (Intel Xeon), with **k6 on the same machine as the server**. The server was `uvicorn --workers 4` with local PostgreSQL 17 and Redis 7, and the database held 200 employees. Closed-loop VUs, no think time. Full method and environment: [benchmarks/README.md](benchmarks/README.md). Raw data: [k6 output](benchmarks/results-2026-10-19/k6-output.txt), [summary JSON](benchmarks/results-2026-10-19/k6-summary.json).
+single run on one 8 vCPU / 15 GiB VM (Intel Xeon), with **k6 on the same machine as the server**. the server was `uvicorn --workers 4` with local PostgreSQL 17 and Redis 7, and the database held 200 employees. closed-loop VUs, no think time. full method and environment: [benchmarks/README.md](benchmarks/README.md). raw data: [k6 output](benchmarks/results-2026-10-19/k6-output.txt), [summary JSON](benchmarks/results-2026-10-19/k6-summary.json).
 
 | Endpoint | Concurrency (VUs) | Requests | Throughput (req/s) | p50 (ms) | p95 (ms) | p99 (ms) | Max (ms) | Error rate |
 |---|---|---|---|---|---|---|---|---|
@@ -63,12 +63,12 @@ Single run on one 8 vCPU / 15 GiB VM (Intel Xeon), with **k6 on the same machine
 | `GET /auth/me` | 50 | 38,914 | 1,297 | 34.6 | 71.1 | 89.4 | 143.0 | 0.00% |
 | `POST /auth/login` | 20 | 939 | 47 | 427.4 | 623.0 | 715.1 | 894.4 | 0.00% |
 
-- Sustained **798 req/s at p95 106 ms** on the paginated employee list (50 VUs) on that hardware.
-- Login is CPU-bound by design (argon2 password hashing): 47 logins/s at p95 623 ms.
-- Cold start (process launch to first healthy response, 4 workers): **957 ms**. Memory (RSS, master + 4 workers): **445 MB idle, 520 MB under load**.
-- These are local numbers. Production on Vercel + Neon adds network round-trips and serverless cold starts, which this run didn't measure.
+- sustained **798 req/s at p95 106 ms** on the paginated employee list (50 VUs) on that hardware.
+- login is CPU-bound by design (argon2 password hashing): 47 logins/s at p95 623 ms.
+- cold start (process launch to first healthy response, 4 workers): **957 ms**. memory (RSS, master + 4 workers): **445 MB idle, 520 MB under load**.
+- these are local numbers. production on Vercel + Neon adds network round-trips and serverless cold starts, which this run didn't measure.
 
-Reproduce: `benchmarks/run.sh`.
+reproduce: `benchmarks/run.sh`.
 
 ## auth model
 
