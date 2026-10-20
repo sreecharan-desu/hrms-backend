@@ -321,3 +321,20 @@ async def test_smtp_send_stub_real_and_failure(monkeypatch):
     await HANDLER_MAP["email.send"]({"to": "b@x.com", "subject": "s", "body_text": "b"})
     assert _FakeSMTP.sent[-1][2]["To"] == "b@x.com"
     await HANDLER_MAP["sms.send"]({"phone": "1", "message": "m"})
+
+
+@pytest.mark.asyncio
+async def test_otp_attempts_are_limited_per_email(live_redis, client):
+    await client.post("/api/v1/auth/forgot-password", json={"email": "staff@example.com"})
+    for _ in range(5):
+        r = await client.post(
+            "/api/v1/auth/verify-otp", json={"email": "staff@example.com", "otp": "abcdef"}
+        )
+        assert r.status_code == 401
+    blocked = await client.post(
+        "/api/v1/auth/verify-otp", json={"email": "staff@example.com", "otp": "abcdef"}
+    )
+    assert blocked.status_code == 401 and "Too many" in blocked.text
+    assert await live_redis.get("otp_fail:staff@example.com") == "5"
+    # other emails are unaffected
+    assert await rc.otp_attempts_exceeded("admin@example.com") is False

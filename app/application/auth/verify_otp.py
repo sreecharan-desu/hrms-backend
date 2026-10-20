@@ -12,6 +12,11 @@ from app.application.auth.reset_tokens import (
     token_digest,
 )
 from app.core.exceptions import AuthError
+from app.infrastructure.cache.redis import (
+    clear_failed_otp,
+    otp_attempts_exceeded,
+    record_failed_otp,
+)
 from app.infrastructure.database.models.user import PasswordResetToken
 from app.infrastructure.database.uow import SqlAlchemyUnitOfWork
 
@@ -30,14 +35,20 @@ async def verify_otp(
     uow: SqlAlchemyUnitOfWork,
 ) -> VerifyOTPResult:
     """Consume a valid OTP and issue a single-use reset token bound to the user."""
+    if await otp_attempts_exceeded(email):
+        raise AuthError("Too many attempts. Request a new code later.")
+
     user = await uow.users.get_by_email(email)
     if user is None:
+        await record_failed_otp(email)
         raise AuthError(_INVALID)
 
     expected = token_digest("otp", user.id, otp)
     token = await uow.password_resets.get_by_token_hash(expected)
     if not is_usable(token, user_id=user.id, expected_digest=expected):
+        await record_failed_otp(email)
         raise AuthError(_INVALID)
+    await clear_failed_otp(email)
     assert token is not None
     await uow.password_resets.mark_used(token.id)
 
