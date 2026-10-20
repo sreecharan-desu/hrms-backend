@@ -1,0 +1,10 @@
+date: 2026-10-20T15:00:38+00:00
+cpu: 8 x Intel(R) Xeon(R) Processor
+ram_mb: 16002
+Linux 6.12.94+
+Python 3.12.15
+Redis server v=8.0.2
+db: in-memory sqlite (aiosqlite) per test, as in the existing suite
+command: pytest -q -p no:logging --cov=app --cov-report=term
+coverage config: concurrency = greenlet, thread (pyproject.toml)
+pytest-coverage-original-tests.txt: the 199 pre-existing tests under the same coverage config

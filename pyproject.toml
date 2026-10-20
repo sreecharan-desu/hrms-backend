@@ -115,3 +115,8 @@ filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::sqlalchemy.exc.SAWarning",
 ]
+
+[tool.coverage.run]
+# sqlalchemy's async layer runs orm code inside greenlets; without greenlet
+# tracing, coverage misses every line after the first await into the db.
+concurrency = ["greenlet", "thread"]

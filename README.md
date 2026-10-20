@@ -47,15 +47,15 @@ pytest -q                  # unit + api tests on in-memory sqlite, no services n
 ruff check app tests && mypy app
 ```
 
-measured 19 oct 2026: 199 passed in 9.4 s, 57% line coverage ([raw output](benchmarks/results-2026-10-19/pytest-coverage.txt)).
+measured 20 oct 2026 on one 8 vCPU Intel Xeon / 16 GB box (Linux 6.12, Python 3.12.15): 247 passed, 88% line coverage ([raw output](benchmarks/results-2026-10-20/pytest-coverage.txt), [environment](benchmarks/results-2026-10-20/environment.txt)). coverage now traces greenlets (`[tool.coverage.run]` in `pyproject.toml`); under that config the original 199 tests alone measure 60% ([raw](benchmarks/results-2026-10-20/pytest-coverage-original-tests.txt)). the 19 oct figure of 57% was measured without greenlet tracing.
 
 ## env
 
 copy `.env.example` to `.env`. it needs `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED` (direct, for alembic) and a jwt secret.
 
-## performance (measured)
+## local benchmark
 
-single run on one 8 vCPU / 15 GiB VM (Intel Xeon), with **k6 on the same machine as the server**. the server was `uvicorn --workers 4` with local PostgreSQL 17 and Redis 7, and the database held 200 employees. closed-loop VUs, no think time. full method and environment: [benchmarks/README.md](benchmarks/README.md). raw data: [k6 output](benchmarks/results-2026-10-19/k6-output.txt), [summary JSON](benchmarks/results-2026-10-19/k6-summary.json).
+local benchmark, single run on one 8 vCPU / 15 GiB VM (Intel Xeon, Debian 13, kernel 6.12, Python 3.12.15, k6 v0.54.0), with **k6 on the same machine as the server**. the server was `uvicorn --workers 4` with local PostgreSQL 17 and Redis 7, and the database held 200 employees. closed-loop VUs, no think time. full method and environment: [benchmarks/README.md](benchmarks/README.md). raw data: [k6 output](benchmarks/results-2026-10-19/k6-output.txt), [summary JSON](benchmarks/results-2026-10-19/k6-summary.json).
 
 | endpoint | concurrency (VUs) | requests | throughput (req/s) | p50 (ms) | p95 (ms) | p99 (ms) | max (ms) | error rate |
 |---|---|---|---|---|---|---|---|---|
@@ -63,10 +63,10 @@ single run on one 8 vCPU / 15 GiB VM (Intel Xeon), with **k6 on the same machine
 | `GET /auth/me` | 50 | 38,914 | 1,297 | 34.6 | 71.1 | 89.4 | 143.0 | 0.00% |
 | `POST /auth/login` | 20 | 939 | 47 | 427.4 | 623.0 | 715.1 | 894.4 | 0.00% |
 
-- sustained **798 req/s at p95 106 ms** on the paginated employee list (50 VUs) on that hardware.
+- in this local run: 798 req/s at p95 106 ms on the paginated employee list (50 VUs).
 - login is CPU-bound by design (argon2 password hashing): 47 logins/s at p95 623 ms.
 - cold start (process launch to first healthy response, 4 workers): **957 ms**. memory (RSS, master + 4 workers): **445 MB idle, 520 MB under load**.
-- these are local numbers. production on Vercel + Neon adds network round-trips and serverless cold starts, which this run didn't measure.
+- these are local numbers, not production measurements. the deployed setup (Vercel + Neon) adds network round-trips and serverless cold starts, which this run didn't measure.
 
 reproduce: `benchmarks/run.sh`.
 
@@ -78,6 +78,5 @@ reproduce: `benchmarks/run.sh`.
 
 ## known issues
 
-- no license file yet. all rights reserved until one is added.
-- coverage is uneven: `reports` (43%), `recruitment` (50%) and `leave` (51%) routers are the least tested.
+- tests run on sqlite, so `/auth/refresh` token rotation (tz-aware datetime compare) and postgres-only behaviour are not exercised; the arq worker and real s3 calls are untested.
 - the benchmark doesn't cover the production setup (vercel + neon) or write-heavy endpoints.
