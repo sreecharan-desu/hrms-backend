@@ -57,7 +57,7 @@ copy `.env.example` to `.env`. it needs `DATABASE_URL` (pooled), `DATABASE_URL_U
 
 single run on one 8 vCPU / 15 GiB VM (Intel Xeon), with **k6 on the same machine as the server**. the server was `uvicorn --workers 4` with local PostgreSQL 17 and Redis 7, and the database held 200 employees. closed-loop VUs, no think time. full method and environment: [benchmarks/README.md](benchmarks/README.md). raw data: [k6 output](benchmarks/results-2026-10-19/k6-output.txt), [summary JSON](benchmarks/results-2026-10-19/k6-summary.json).
 
-| Endpoint | Concurrency (VUs) | Requests | Throughput (req/s) | p50 (ms) | p95 (ms) | p99 (ms) | Max (ms) | Error rate |
+| endpoint | concurrency (VUs) | requests | throughput (req/s) | p50 (ms) | p95 (ms) | p99 (ms) | max (ms) | error rate |
 |---|---|---|---|---|---|---|---|---|
 | `GET /employees` | 50 | 23,950 | 798 | 64.8 | 106.3 | 144.6 | 187.0 | 0.00% |
 | `GET /auth/me` | 50 | 38,914 | 1,297 | 34.6 | 71.1 | 89.4 | 143.0 | 0.00% |
