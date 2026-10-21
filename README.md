@@ -80,3 +80,7 @@ reproduce: `benchmarks/run.sh`.
 
 - tests run on sqlite, so `/auth/refresh` token rotation (tz-aware datetime compare) and postgres-only behaviour are not exercised; the arq worker and real s3 calls are untested.
 - the benchmark doesn't cover the production setup (vercel + neon) or write-heavy endpoints.
+
+---
+
+built by [sreecharan desu](https://www.sreecharandesu.in) · [more projects](https://www.sreecharandesu.in/work)
